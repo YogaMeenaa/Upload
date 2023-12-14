@@ -1,4 +1,4 @@
-# apptrial
+# gallery
 
 A new Flutter project.
 

@@ -1,8 +1,8 @@
-import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-//import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 void main() async {
   await Firebase.initializeApp(
@@ -17,14 +17,14 @@ void main() async {
           measurementId: "G-8F4JPFH9YL"));
   runApp(
     MaterialApp(debugShowCheckedModeBanner: false, initialRoute: '/', routes: {
-      '/': (context) => MyStatefulWidget(),
-
-      //'/upload': (context) => ImageUploadScreen(),
+      '/': (context) => const MyStatefulWidget(),
     }),
   );
 }
 
 class MyStatefulWidget extends StatefulWidget {
+  const MyStatefulWidget({super.key});
+
   @override
   HomeGallery createState() => HomeGallery();
 }
@@ -156,12 +156,6 @@ final List<PhotoItem> _items = [
 ];
 
 class HomeGallery extends State<MyStatefulWidget> {
-  void _deletePhotoItem(int index) {
-    setState(() {
-      _items.removeAt(index); // Remove the item from the list
-    });
-  }
-
   List<String> selectedPhotographers = [];
   late List<String> allPhotographers;
 
@@ -169,50 +163,52 @@ class HomeGallery extends State<MyStatefulWidget> {
   void initState() {
     super.initState();
     // Initialize the list of all photographer names
-    allPhotographers = _items.map((item) => item.desc).toSet().toList();
+
+    _fetchPhotographers();
+    // allPhotographers = _items.map((item) => item.desc).toSet().toList();
   }
 
-  // ignore: prefer_final_fields
-  //bool _isChecked = false;
-  bool isFilter = false;
+  Future<void> _fetchPhotographers() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('images')
+        .snapshots()
+        .first; // Using first to get the initial snapshot
+    allPhotographers =
+        snapshot.docs.map((doc) => doc['photographerName'] as String).toList();
+  }
 
-  int selectindex = 0;
+  int _selectindex = 0;
 
   // This function is called whenever the text field changes
   // ignore: non_constant_identifier_names
-  void _nameFilter(String enteredKeyword) {
-    List<PhotoItem> results = [];
-    if (enteredKeyword.isEmpty) {
-      // if the search field is empty or only contains white-space, we'll display all users
-      results = _items;
-    } else {
-      results = _items
-          .where((item) =>
-              selectedPhotographers.isEmpty ||
-              selectedPhotographers.contains(item.desc))
-          .toList();
-      // we use the toLowerCase() method to make it case-insensitive
-    }
+  // void _nameFilter(String enteredKeyword) {
+  //   List<String> results = [];
+  //   if (enteredKeyword.isEmpty) {
+  //     // if the search field is empty or only contains white-space, we'll display all users
+  //     results = allPhotographers;
+  //   } else {
+  //     var desc;
+  //     results = allPhotographers
+  //         .where((item) =>
+  //             selectedPhotographers.isEmpty ||
+  //             selectedPhotographers.contains(item.desc))
+  //         .toList();
+  //     // we use the toLowerCase() method to make it case-insensitive
+  //   }
 
-    // Refresh the UI
-    setState(() {
-      filteredItems = results;
-    });
-    //print(results);
-  }
+  //   // Refresh the UI
+  //   setState(() {
+  //     filteredItems = results.cast<PhotoItem>();
+  //   });
+  //   //print(results);
+  // }
 
   @override
   Widget build(BuildContext context) {
-    List<PhotoItem> filteredItems = _items
-        .where((item) =>
-            selectedPhotographers.isEmpty ||
-            selectedPhotographers.contains(item.desc))
-        .toList();
-
     return Scaffold(
         appBar: AppBar(
           backgroundColor: const Color.fromRGBO(74, 76, 80, 1),
-          title: const Text('Gallery'),
+          title: const Text('Photo Gallery'),
           actions: [
             PopupMenuButton(
               icon: const Icon(Icons.sort),
@@ -226,10 +222,10 @@ class HomeGallery extends State<MyStatefulWidget> {
                           (BuildContext context, StateSetter innerSetState) {
                         return Row(children: [
                           Checkbox(
-                            value: selectindex == 0,
+                            value: _selectindex == 0,
                             onChanged: (bool? value) {
                               if (value == true) {
-                                selectindex = 0;
+                                _selectindex = 0;
                                 innerSetState(
                                   () {
                                     _items.sort(
@@ -237,7 +233,6 @@ class HomeGallery extends State<MyStatefulWidget> {
                                   },
                                 );
                                 Navigator.pop(context);
-                                // this.selectindex = 0;
                               }
 
                               setState(() {});
@@ -260,10 +255,10 @@ class HomeGallery extends State<MyStatefulWidget> {
                           (BuildContext context, StateSetter innerSetState) {
                         return Row(children: [
                           Checkbox(
-                            value: selectindex == 1,
+                            value: _selectindex == 1,
                             onChanged: (bool? value) {
                               if (value == true) {
-                                selectindex = 1;
+                                _selectindex = 1;
                                 innerSetState(
                                   () {
                                     _items.sort(
@@ -271,7 +266,6 @@ class HomeGallery extends State<MyStatefulWidget> {
                                   },
                                 );
                                 Navigator.pop(context);
-                                //  this.selectindex = 1;
                               }
 
                               innerSetState(
@@ -297,11 +291,11 @@ class HomeGallery extends State<MyStatefulWidget> {
                           (BuildContext context, StateSetter innerSetState) {
                         return Row(children: [
                           Checkbox(
-                            value: selectindex == 2,
+                            value: _selectindex == 2,
                             onChanged: (bool? value) {
                               if (value == true) {
-                                selectindex = 2;
-                                //  this.selectindex = 2;
+                                _selectindex = 2;
+
                                 innerSetState(
                                   () {
                                     _items.sort(
@@ -350,11 +344,17 @@ class HomeGallery extends State<MyStatefulWidget> {
                                   innerSetState(() {
                                     if (value == true) {
                                       selectedPhotographers.add(photographer);
-                                      _nameFilter(photographer);
+                                      //  print(selectedPhotographers);
+                                      setState(() {});
+                                      // _nameFilter(photographer);
+                                      ImageGrid(photo: selectedPhotographers);
                                     } else {
                                       selectedPhotographers
                                           .remove(photographer);
-                                      _nameFilter(photographer);
+                                      setState(() {});
+                                      // ImageGrid(selectedPhotographers);
+                                      // _nameFilter(photographer);
+                                      ImageGrid(photo: selectedPhotographers);
                                     }
                                     //  print(selectedPhotographers);
                                   });
@@ -377,362 +377,366 @@ class HomeGallery extends State<MyStatefulWidget> {
           ],
         ),
         body: Center(
-          child: Stack(children: [
-            GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisSpacing: 0,
-                mainAxisSpacing: 0,
-                crossAxisCount: 3,
+          child: Stack(
+            children: [
+              ImageGrid(
+                photo: const [],
               ),
-              itemCount: filteredItems.length,
-              itemBuilder: (context, index) {
-                // Assuming _items[index].date is a DateTime object
-                String formattedDate =
-                    DateFormat('yyyy-MM-dd').format(filteredItems[index].date);
-                // Now you can use formattedDate wherever a String is expected
+              Positioned(
+                // padding: const EdgeInsets.only(bottom: 5, right: 5),
+                bottom: 16.0, // Adjust the position from the bottom as needed
+                right: 16.0,
+                child: FloatingActionButton(
+                  onPressed: () {
+                    // Handle the button press to upload a file
+                    // You can add your upload logic here
+                    _showInputDialog(context);
+                  },
+                  backgroundColor: const Color.fromRGBO(246, 143, 80,
+                      1), // Change the background color of the button
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                        30.0), // Round the edges of the button
+                  ),
+                  child: const Icon(Icons.add),
+                ),
+              ),
+            ],
+          ),
+        ));
+  }
+}
 
-                return Stack(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  PhotoViewPage(photo: filteredItems[index])),
-                        );
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            fit: BoxFit.cover,
-                            image: NetworkImage(filteredItems[index].image),
+// ignore: must_be_immutable
+class ImageGrid extends StatelessWidget {
+  // HomeGallery homeGallery = HomeGallery();
+
+  DateTime? timestamp;
+
+  List photo;
+  // List selectedphotographer;
+  ImageGrid({super.key, required this.photo});
+
+  @override
+  Widget build(BuildContext context) {
+    //print(photo);
+    Query query = FirebaseFirestore.instance.collection('images');
+    if (photo.isNotEmpty) {
+      query = query.where('photographerName', whereIn: photo);
+    }
+
+    return StreamBuilder(
+      stream: query.snapshots(),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Error: ${snapshot.error}'),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text('No images available.'),
+          );
+        }
+
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 5 : 3,
+          ),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            var document = snapshot.data!.docs[index];
+            var id = document.id;
+            var imageUrl = document['photoURL'] as String;
+            var imageName = document['photographerName'] as String;
+            var isLiked = document['isLiked'] as bool;
+            var desc = document['description'] as String;
+            var timestampFromFirestore = document['createdTime'] as Timestamp?;
+            timestamp = timestampFromFirestore?.toDate();
+
+            String formattedDate =
+                DateFormat('dd MMM, yyyy').format(timestamp!);
+            return Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                    12.0), // Adjust corner radius as needed
+              ),
+              child: Stack(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PhotoViewPage(
+                            id: id,
+                            imageUrl: imageUrl,
+                            description: desc,
+                            photographerName: imageName,
+                            isLiked: isLiked,
                           ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(
+                            12.0), // Adjust corner radius as needed
+                        image: DecorationImage(
+                          fit: BoxFit.cover,
+                          image: NetworkImage(imageUrl),
                         ),
                       ),
                     ),
-                    Positioned(
-                      top: 90,
-                      left: 00,
-                      right: 00,
-                      bottom: 00,
+                  ),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          bool updatedLikeStatus = !isLiked;
+                          FirebaseFirestore.instance
+                              .collection('images')
+                              .doc(document.id)
+                              .update({'isLiked': updatedLikeStatus});
+                        },
+                        child: Icon(
+                          isLiked ? Icons.favorite : Icons.favorite,
+                          color: isLiked ? Colors.red : Colors.white,
+                          size: 25,
+                        ),
+                      ),
+                      const Spacer(),
+                      InkWell(
+                        onTap: () {
+                          // Add your delete logic here
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: Center(
+                                  child: Text(
+                                    'Confirm',
+                                    style: GoogleFonts.poppins(
+                                      color: const Color.fromRGBO(0, 0, 0, 1),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                content: SizedBox(
+                                  width: 300,
+                                  height: 70,
+                                  child: Column(
+                                    children: [
+                                      Center(
+                                        child: Text(
+                                          'Sure you want to delete the selected photo?',
+                                          style: GoogleFonts.poppins(
+                                            color: const Color.fromRGBO(
+                                                0, 0, 0, 1),
+                                            fontSize: 16,
+                                            // fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.all(16.0),
+                                actionsPadding: const EdgeInsets.all(8.0),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20.0),
+                                ),
+                                actions: <Widget>[
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: <Widget>[
+                                      SizedBox(
+                                        width: 120.0, // Set the desired width
+                                        height: 40.0, // Set the desired height
+                                        child: TextButton(
+                                          onPressed: () {
+                                            Navigator.of(context)
+                                                .pop(); // Close the dialog
+                                          },
+                                          style: ButtonStyle(
+                                            backgroundColor:
+                                                MaterialStateProperty.all<
+                                                        Color>(
+                                                    const Color.fromRGBO(
+                                                        246, 143, 80, 1)),
+                                          ),
+                                          child: const Text(
+                                            'CANCEL',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color.fromRGBO(
+                                                  255, 255, 255, 1),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        height: 50,
+                                        width: 10,
+                                      ),
+                                      SizedBox(
+                                        width: 120.0, // Set the desired width
+                                        height: 40.0, // Set the desired height
+                                        child: TextButton(
+                                          onPressed: () {
+                                            _deleteImage(document.id);
+                                            Navigator.of(context).pop();
+                                          },
+                                          style: ButtonStyle(
+                                            backgroundColor:
+                                                MaterialStateProperty.all<
+                                                        Color>(
+                                                    const Color.fromRGBO(
+                                                        246, 80, 80, 1)),
+                                          ),
+                                          child: const Text(
+                                            'DELETE',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color.fromRGBO(
+                                                  255, 255, 255, 1),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          child: const Icon(
+                            Icons.delete,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: SizedBox(
+                      height: 75,
                       child: Container(
+                        width: MediaQuery.of(context).size.width,
                         color: Colors.black.withOpacity(0.5),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Description
                             Text(
-                              filteredItems[index].name,
+                              desc,
                               style: const TextStyle(
                                 fontSize: 10,
                                 color: Color.fromRGBO(255, 255, 255, 1),
-
-                                //fontWeight: FontWeight.bold
                               ),
                               textAlign: TextAlign.right,
                             ),
-                            Align(
-                              alignment: Alignment.bottomRight,
-                              child: Text(
-                                "-by ${filteredItems[index].desc}",
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                    fontSize: 15,
-                                    color: Color.fromRGBO(255, 255, 255, 1),
-                                    fontWeight: FontWeight.bold),
-                              ),
+                            const SizedBox(
+                              height: 10,
                             ),
-                            Text(
-                              formattedDate,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Color.fromRGBO(255, 255, 255, 1),
-                                //fontWeight: FontWeight.bold
-                              ),
+                            // Row with Date and Image Name
+                            Row(
+                              children: [
+                                // Date
+                                Expanded(
+                                  child: Text(
+                                    formattedDate,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Color.fromRGBO(255, 255, 255, 1),
+                                    ),
+                                    textAlign: TextAlign.left,
+                                  ),
+                                ),
+                                const SizedBox(
+                                  width: 20,
+                                ),
+                                // Image Name
+                                Expanded(
+                                  child: Text(
+                                    "-by $imageName",
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      color: Color.fromRGBO(255, 255, 255, 1),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                              ],
                             )
                           ],
                         ),
                       ),
                     ),
-                    Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              filteredItems[index].isLiked =
-                                  !filteredItems[index].isLiked;
-                            });
-                          },
-                          child: Icon(
-                            filteredItems[index].isLiked
-                                ? Icons.favorite
-                                : Icons.favorite,
-                            color: filteredItems[index].isLiked
-                                ? Colors.red
-                                : Colors.white,
-                            size: 25,
-                          ),
-                        )),
-                    Padding(
-                        padding: const EdgeInsets.only(
-                            left: 100, top: 5, right: 5, bottom: 90),
-                        child: InkWell(
-                          onTap: () {
-                            // Add your delete logic here
-                            showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: Center(
-                                      child: Text(
-                                        'Confirm',
-                                        style: GoogleFonts.poppins(
-                                            color: const Color.fromRGBO(
-                                                0, 0, 0, 1),
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    content: SizedBox(
-                                      width: 300,
-                                      height: 70,
-                                      child: Column(children: [
-                                        Center(
-                                          child: Text(
-                                              'Sure you want to delete the selected photo?',
-                                              style: GoogleFonts.poppins(
-                                                  color: const Color.fromRGBO(
-                                                      0, 0, 0, 1),
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold)),
-                                        )
-                                      ]),
-                                    ),
-                                    contentPadding: const EdgeInsets.all(16.0),
-                                    actionsPadding: const EdgeInsets.all(8.0),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                          20.0), // Set border radius here
-                                    ),
-                                    actions: <Widget>[
-                                      ButtonBar(
-                                        alignment: MainAxisAlignment.center,
-                                        children: [
-                                          TextButton(
-                                            child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 24.0,
-                                                        vertical: 12.0),
-                                                decoration: const BoxDecoration(
-                                                  color: Color.fromRGBO(
-                                                      246,
-                                                      143,
-                                                      80,
-                                                      1), // Background color of the container
-                                                  borderRadius:
-                                                      BorderRadius.only(
-                                                    topLeft:
-                                                        Radius.circular(5.0),
-                                                    topRight:
-                                                        Radius.circular(5.0),
-                                                    bottomLeft:
-                                                        Radius.circular(5.0),
-                                                    bottomRight:
-                                                        Radius.circular(5.0),
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  'CANCEL',
-                                                  style: GoogleFonts.poppins(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color:
-                                                          const Color.fromRGBO(
-                                                              255,
-                                                              255,
-                                                              255,
-                                                              1)),
-                                                )),
-                                            onPressed: () {
-                                              Navigator.of(context)
-                                                  .pop(); // Close the dialog
-                                            },
-                                          ),
-                                          TextButton(
-                                            child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 24.0,
-                                                        vertical: 12.0),
-                                                decoration: const BoxDecoration(
-                                                  color: Color.fromRGBO(
-                                                      246,
-                                                      80,
-                                                      80,
-                                                      1), // Background color of the container
-                                                  borderRadius:
-                                                      BorderRadius.only(
-                                                    topLeft:
-                                                        Radius.circular(5.0),
-                                                    topRight:
-                                                        Radius.circular(5.0),
-                                                    bottomLeft:
-                                                        Radius.circular(5.0),
-                                                    bottomRight:
-                                                        Radius.circular(5.0),
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  'DELETE',
-                                                  style: GoogleFonts.poppins(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color:
-                                                          const Color.fromRGBO(
-                                                              255,
-                                                              255,
-                                                              255,
-                                                              1)),
-                                                )),
-                                            onPressed: () {
-                                              _deletePhotoItem(
-                                                  index); // Call the delete method
-                                              Navigator.of(context)
-                                                  .pop(); // Close the dialog
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 16.0),
-                                    ],
-                                  );
-                                });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(5),
-                            child: const Icon(
-                              Icons.delete,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ))
-                  ],
-                );
-              },
-            ),
-            Positioned(
-              // padding: const EdgeInsets.only(bottom: 5, right: 5),
-              bottom: 16.0, // Adjust the position from the bottom as needed
-              right: 16.0,
-              child: FloatingActionButton(
-                onPressed: () {
-                  // Handle the button press to upload a file
-                  // You can add your upload logic here
-                  _showInputDialog(context);
-                },
-                backgroundColor: const Color.fromRGBO(246, 143, 80,
-                    1), // Change the background color of the button
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                      30.0), // Round the edges of the button
-                ),
-                child: const Icon(Icons.add),
+                  )
+                ],
               ),
-            ),
-          ]),
-        ));
-  }
-
-  Future<void> _showInputDialog(BuildContext context) async {
-    TextEditingController textController_1 = TextEditingController();
-    TextEditingController textController_2 = TextEditingController();
-    TextEditingController textController_3 = TextEditingController();
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-            title: const Text(
-              'Add Photo',
-              textAlign: TextAlign.center,
-            ),
-            content: SizedBox(
-              width: 1000,
-              child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                _buildTextFieldWithTitle('Photographer Name', textController_1),
-                _buildTextFieldWithTitle('Image URL', textController_2),
-                _buildTextFieldWithTitle('Description', textController_3),
-                //const SizedBox(height: 10),
-                Center(
-                    child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    SizedBox(
-                      width: 100, // Set the desired width for the button
-                      height: 50, // Set the desired height for the button
-                      child: TextButton(
-                        onPressed: () {
-                          // Handle button press
-                        },
-                        style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.all<Color>(
-                              const Color.fromRGBO(246, 143, 80, 1)),
-                        ),
-                        child: Text(
-                          'CANCEL',
-                          style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: const Color.fromRGBO(255, 255, 255, 1)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 50,
-                      width: 20,
-                    ), // Adjust the vertical spacing between buttons if needed
-                    SizedBox(
-                      width: 100, // Set the same width for the second button
-                      height: 50, // Set the same height for the second button
-                      child: TextButton(
-                        onPressed: () {
-                          // Handle button press
-                        },
-                        style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.all<Color>(
-                              const Color.fromRGBO(246, 143, 80, 1)),
-                        ),
-                        child: Text(
-                          'ADD',
-                          style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: const Color.fromRGBO(255, 255, 255, 1)),
-                        ),
-                      ),
-                    ),
-                  ],
-                )),
-              ]),
-            ));
+            );
+          },
+        );
       },
     );
   }
+
+  Future<void> _deleteImage(String documentId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('images')
+          .doc(documentId)
+          .delete();
+      // print('Image deleted successfully');
+    } catch (error) {
+      //  print('Error deleting image: $error');
+    }
+  }
 }
 
+// ignore: must_be_immutable
 class PhotoViewPage extends StatelessWidget {
-  final PhotoItem photo;
-  const PhotoViewPage({Key? key, required this.photo}) : super(key: key);
+  String description, photographerName, id, imageUrl;
+  bool isLiked;
+
+  //final PhotoItem photo;
+  PhotoViewPage(
+      {Key? key,
+      required this.id,
+      required this.photographerName,
+      required this.imageUrl,
+      required this.description,
+      required this.isLiked})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('Image View✌️'),
+          backgroundColor: const Color.fromRGBO(74, 76, 80, 1),
+          title: const Text('Image View'),
         ),
         body: Center(
           child: Stack(
@@ -742,7 +746,7 @@ class PhotoViewPage extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   child: Image(
-                    image: NetworkImage(photo.image),
+                    image: NetworkImage(imageUrl),
                   ),
                 ),
               ),
@@ -751,12 +755,12 @@ class PhotoViewPage extends StatelessWidget {
                 child: (Column(
                   children: [
                     Text(
-                      photo.name,
+                      photographerName,
                       style: const TextStyle(
                           fontSize: 30, fontStyle: FontStyle.italic),
                     ),
                     Text(
-                      photo.desc,
+                      description,
                       style: const TextStyle(fontSize: 10),
                     ),
                   ],
@@ -771,39 +775,159 @@ class PhotoViewPage extends StatelessWidget {
 Widget _buildTextFieldWithTitle(
     String title, TextEditingController controller) {
   return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Table(
-        children: [
-          TableRow(
-            children: [
-              TableCell(
-                  verticalAlignment: TableCellVerticalAlignment.middle,
-                  child: Container(
-                    width: 150, // Set the desired width for the TableCell
-                    height: 50, // Set the desired height for the TableCell
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(title,
-                        textAlign: TextAlign.left,
-                        style: GoogleFonts.poppins(
-                          color: const Color.fromRGBO(0, 0, 0, 1),
-                          fontSize: 16,
-                        )),
-                  )),
-              TableCell(
-                  verticalAlignment: TableCellVerticalAlignment.middle,
-                  child: Container(
-                    width: 150, // Set the same width for the second TableCell
-                    height: 50, // Set the same height for the second TableCell
-                    padding: const EdgeInsets.all(8.0),
-                    child: TextField(
-                      controller: controller,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder(), hintText: 'Enter Text'),
-                      textAlign: TextAlign.center,
+    padding: const EdgeInsets.all(8.0),
+    child: Table(
+      columnWidths: const {
+        0: FlexColumnWidth(), // Let the first column take available width
+        1: FlexColumnWidth(), // Let the second column take available width
+      },
+      children: [
+        TableRow(
+          children: [
+            TableCell(
+              verticalAlignment: TableCellVerticalAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.left,
+                  style: GoogleFonts.poppins(
+                    color: const Color.fromRGBO(0, 0, 0, 1),
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+            TableCell(
+              verticalAlignment: TableCellVerticalAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'Enter Text',
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+// class _UploadScreen extends StatefulWidget {
+//   @override
+//   _UploadScreenState createState() => _UploadScreenState();
+// }
+
+// class _UploadScreenState extends State<_UploadScreen> {
+final TextEditingController _photographerController = TextEditingController();
+final TextEditingController _photoUrlController = TextEditingController();
+final TextEditingController _dateController = TextEditingController();
+final TextEditingController _descriptionController = TextEditingController();
+
+Future<void> _uploadToFirestore() async {
+  try {
+    await FirebaseFirestore.instance.collection('images').add({
+      'photographerName': _photographerController.text,
+      'photoURL': _photoUrlController.text,
+      'createdTime': Timestamp.now(),
+      'description': _descriptionController.text,
+      'isLiked': false,
+    });
+
+    // Clear the text controllers after uploading
+    _photographerController.clear();
+    _photoUrlController.clear();
+    _dateController.clear();
+    _descriptionController.clear();
+  } catch (error) {
+    //print('Error uploading data: $error');
+  }
+}
+
+Future<void> _showInputDialog(BuildContext context) async {
+  return showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+          title: const Text('Add Photo',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              )),
+          content: SizedBox(
+            width: 400,
+            height: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _buildTextFieldWithTitle(
+                    'Photographer Name', _photographerController),
+                _buildTextFieldWithTitle('Image URL', _photoUrlController),
+                _buildTextFieldWithTitle('Description', _descriptionController),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    SizedBox(
+                      width: 120.0, // Set the desired width
+                      height: 40.0, // Set the desired height
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                        },
+                        style: ButtonStyle(
+                          backgroundColor: MaterialStateProperty.all<Color>(
+                              const Color.fromRGBO(246, 143, 80, 1)),
+                        ),
+                        child: const Text(
+                          'CANCEL',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromRGBO(255, 255, 255, 1),
+                          ),
+                        ),
+                      ),
                     ),
-                  )),
-            ],
+                    const SizedBox(
+                      height: 50,
+                      width: 10,
+                    ),
+                    SizedBox(
+                      width: 120.0, // Set the desired width
+                      height: 40.0, // Set the desired height
+                      child: TextButton(
+                        onPressed: () {
+                          _uploadToFirestore();
+                          Navigator.of(context).pop(); // Close the dialog
+                        },
+                        style: ButtonStyle(
+                          backgroundColor: MaterialStateProperty.all<Color>(
+                              const Color.fromRGBO(246, 143, 80, 1)),
+                        ),
+                        child: const Text(
+                          'ADD',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromRGBO(255, 255, 255, 1),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
-      ));
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ));
+    },
+  );
 }

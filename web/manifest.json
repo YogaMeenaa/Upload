@@ -1,6 +1,6 @@
 {
-    "name": "apptrial",
-    "short_name": "apptrial",
+    "name": "gallery",
+    "short_name": "gallery",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
